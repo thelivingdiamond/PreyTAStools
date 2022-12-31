@@ -1,0 +1,35 @@
+<config version="1.0.0">
+<!--    authors of the movie-->
+    <authors></authors>
+<!--    does the game restarts automatically when closed-->
+    <auto_restart></auto_restart>
+<!--    frame count of the movie file-->
+    <frame_count></frame_count>
+<!--    denominator of the number of frames per second-->
+    <framerate_den></framerate_den>
+<!--     numerator of the number of frames per second-->
+    <framerate_num></framerate_num>
+<!--    name of the game executable-->
+    <game_name></game_name>
+<!--    number of nanoseconds of the initial system time-->
+    <initial_time_nsec></initial_time_nsec>
+<!--    number of seconds of the initial system time-->
+    <initial_time_sec></initial_time_sec>
+<!--    are keyboard inputs sent to the game-->
+    <keyboard_support></keyboard_support>
+<!--    number of nanoseconds of movie length-->
+    <length_nsec></length_nsec>
+<!--    number of seconds of movie length-->
+    <length_sec></length_sec>
+    <libtas_major_version></libtas_major_version>
+    <libtas_minor_version></libtas_minor_version>
+    <libtas_patch_version></libtas_patch_version>
+<!--    md5 hash of the game executable-->
+    <md5></md5>
+<!--    are mouse inputs sent to the game-->
+    <mouse_support></mouse_support>
+<!--     up to 4 controllers are supported-->
+    <nb_controllers></nb_controllers>
+<!--    savestate frame for savestate movies?????-->
+    <rerecord_count></rerecord_count>
+</config>
