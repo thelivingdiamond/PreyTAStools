@@ -30,7 +30,13 @@
 *.exe
 *.out
 *.app
+
+# CLion 
 /.idea/
 .idea/vcs.xml
-/cmake-build-debug/
-/cmake-build-release/
+
+# Ignore CMake build directory
+/build
+/_build
+/cmake-build-*/
+/.idea/
