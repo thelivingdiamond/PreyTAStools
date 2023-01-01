@@ -89,7 +89,7 @@ parseString(std::string &inputString) {
     bool error = false;
     while(!segmentedString.empty()) {
         // segments will always begin with a pipe, so the segment will be the first character after the pipe, until the next pipe OR the end of the string
-        auto segment = segmentedString.substr(1, segmentedString.find('|', 1));
+        auto segment = segmentedString.substr(1, segmentedString.find('|', 1) - 1);
         // remove the segment from the string
         segmentedString = segmentedString.substr(segment.size() + 1);
         if(segment.empty()) {

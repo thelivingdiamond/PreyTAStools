@@ -108,6 +108,7 @@ void ModMain::Draw()
     if(!m_bDrawGUI)
         return;
 
+    ImGui::SetNextWindowBgAlpha(1.0f);
 	if (ImGui::Begin("TAS Tools", &m_bDrawGUI)){
         auto input = (CBaseInput*)gEnv->pInput;
         ImGui::Text("Input");
@@ -137,10 +138,13 @@ void ModMain::Draw()
         if(ImGui::Button("Load Inputs")){
             m_inputsFileParser->parseInputsFile(inputFileName);
         }
-        static int clipLimit = 0;
+        static int clipLimit = 100;
         ImGui::InputInt("Clip Limit", &clipLimit);
         int clip = 0;
-        if(ImGui::BeginTable("Inputs", 2, ImGuiTableFlags_Borders)){
+        if(ImGui::BeginTable("Inputs", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY)){
+            ImGui::TableSetupColumn("Frame", ImGuiTableColumnFlags_WidthFixed);
+            ImGui::TableSetupColumn("Input");
+            ImGui::TableHeadersRow();
             for (auto &frameInputs: m_inputsFileParser->m_frameInputs) {
                 if(clip > clipLimit) {
                     ImGui::TableNextRow();
