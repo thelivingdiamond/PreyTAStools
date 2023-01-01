@@ -13,7 +13,11 @@ class InputsFileParser {
 public:
     InputsFileParser();
     ~InputsFileParser() = default;
-    std::queue<FrameInputs> m_frameInputsQueue;
+    // sorted list of frame inputs
+    std::vector<FrameInputs> m_frameInputs;
+    fs::path m_loadedInputsFilePath;
+    uint64_t m_frameCount = 0;
+
     void parseInputsFile(fs::path inputsFilePath);
 };
 

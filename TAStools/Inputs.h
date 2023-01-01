@@ -57,8 +57,9 @@ struct FrameInputs {
     //TODO: add gamepad inputs
     uint64_t m_frameNumber;
     bool m_bBlankFrame;
+    std::string m_frameString;
     bool parseString(std::string & inputString);
-
+    void setFrameNumber(uint64_t frameNumber) { m_frameNumber = frameNumber; }
 
     // create operators for sorting and searching by frame number
     inline bool operator<(const FrameInputs & other) const { return m_frameNumber < other.m_frameNumber; }

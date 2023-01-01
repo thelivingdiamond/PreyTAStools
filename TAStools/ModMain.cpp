@@ -73,6 +73,7 @@ void ModMain::InitGame(bool isHotReloading)
 	BaseClass::InitGame(isHotReloading);
     m_inputRecorder = std::make_unique<InputRecorder>();
     m_inputRecorder->registerListener();
+    m_inputsFileParser = std::make_unique<InputsFileParser>();
 }
 
 void ModMain::ShutdownGame(bool isHotUnloading)
@@ -103,12 +104,11 @@ void ModMain::DrawMenuBar(){
 
 void ModMain::Draw()
 {
-	// Modders, please move to a method, it's just an example
 	DrawMenuBar();
     if(!m_bDrawGUI)
         return;
 
-	if (ImGui::Begin("TAS tools", &m_bDrawGUI)){
+	if (ImGui::Begin("TAS Tools", &m_bDrawGUI)){
         auto input = (CBaseInput*)gEnv->pInput;
         ImGui::Text("Input");
         ImGui::Text("Event Posting Enabled: %s", input->m_enableEventPosting ? "true" : "false");
@@ -130,6 +130,59 @@ void ModMain::Draw()
         //step
         if(ImGui::Button("Step")){
             m_bStep = true;
+        }
+
+        static std::string inputFileName = "inputs.txt";
+        ImGui::InputText("Input File", &inputFileName);
+        if(ImGui::Button("Load Inputs")){
+            m_inputsFileParser->parseInputsFile(inputFileName);
+        }
+        static int clipLimit = 0;
+        ImGui::InputInt("Clip Limit", &clipLimit);
+        int clip = 0;
+        if(ImGui::BeginTable("Inputs", 2, ImGuiTableFlags_Borders)){
+            for (auto &frameInputs: m_inputsFileParser->m_frameInputs) {
+                if(clip > clipLimit) {
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn();
+                    ImGui::Text("...");
+                    break;
+                }
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::Text("Frame %llu", frameInputs.m_frameNumber);
+                ImGui::TableNextColumn();
+                if(!frameInputs.m_mouseInputs.empty()) {
+                    ImGui::Text("Mouse Inputs");
+                    for (auto &mouseInput: frameInputs.m_mouseInputs) {
+                        ImGui::Text("XPos: %f, YPos: %f, %s", mouseInput.m_xPos, mouseInput.m_yPos, mouseInput.m_Absolute ? "Absolute" : "Relative");
+                        ImGui::Text("M1: %u\n"
+                                    "M2: %u\n"
+                                    "M3: %u\n"
+                                    "M4: %u\n"
+                                    "M5: %u\n",
+                                    mouseInput.m_leftButton,
+                                    mouseInput.m_rightButton,
+                                    mouseInput.m_middleButton,
+                                    mouseInput.m_xButton1,
+                                    mouseInput.m_xButton2);
+                    }
+                }
+                if(!frameInputs.m_mouseInputs.empty() && !frameInputs.m_keyboardInputs.empty()){
+                    ImGui::Separator();
+                }
+                if(!frameInputs.m_keyboardInputs.empty()) {
+                    ImGui::Text("Key Inputs");
+                    for (auto &keyInput: frameInputs.m_keyboardInputs) {
+                        ImGui::Text("Key: %u", keyInput.m_keyId);
+                    }
+                }
+                if(frameInputs.m_bBlankFrame){
+                    ImGui::Text("Blank Frame");
+                }
+                clip++;
+            }
+            ImGui::EndTable();
         }
 
 	}

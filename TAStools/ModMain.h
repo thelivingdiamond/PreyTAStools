@@ -1,7 +1,8 @@
 #pragma once
 #include <ChairLoader/ModSDK/ChairloaderModBase.h>
 #include "InputRecorder.h"
-#include "TASMouseInputDevice.h"
+#include "InputsFileParser.h"
+
 
 class ModMain : public ChairloaderModBase
 {
@@ -62,8 +63,7 @@ private:
     bool m_bFUCK = false;
     uint64_t m_frameCount = 0;
     std::unique_ptr<InputRecorder> m_inputRecorder;
-    std::unique_ptr<TASMouseInputDevice> m_mouseInputDevice;
-
+    std::unique_ptr<InputsFileParser> m_inputsFileParser;
     void DrawMenuBar();
 };
 
