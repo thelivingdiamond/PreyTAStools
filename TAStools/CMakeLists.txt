@@ -3,12 +3,12 @@ set(MOD_PREFIX TAS_TOOLS) # CHANGE ME
 
 set(SOURCE_FILES
 	CMakeLists.txt
-	ModMain.cpp ModMain.h
 	pch.h
-		InputRecorder.cpp InputRecorder.h
-		TASMouseInputDevice.cpp TASMouseInputDevice.h
-		InputsFileParser.cpp InputsFileParser.h
-		Inputs.cpp Inputs.h
+	#Mod Main
+	ModMain.cpp ModMain.h
+	InputRecorder.cpp InputRecorder.h
+	InputsFileParser.cpp InputsFileParser.h
+	Inputs.cpp Inputs.h
 	)
 
 add_library(${MOD_NAME} SHARED ${SOURCE_FILES})
