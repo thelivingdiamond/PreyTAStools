@@ -1,0 +1,22 @@
+<!--    name of the movie file-->
+<!--    authors of the movie-->
+<!--    Movie FPS-->
+<!--    frame count of the movie file-->
+<!--    Physics Engine Frame Time-->
+<!--    Physics Engine Frame Count-->
+<!--    Version Info-->
+<config
+        name="inputs"
+        version="1.0.0"
+        authors=""
+        movie_fps="60"
+        move_frame_count=""
+        physics_frame_time="0.00416666666666667"
+        physics_frame_count=""
+        tas_tools_version="0.0.0"
+>
+<!--    Starting CVARS, used for CVars that you need to set up before the TAS begins -->
+    <CVARS>
+        <CVAR name="r_fullscreen" value="1"/>
+    </CVARS>
+</config>

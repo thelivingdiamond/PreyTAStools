@@ -1,0 +1,9 @@
+<Mod
+        modName="thelivingdiamond.TAStools"
+        displayName="TAS Toolkit"
+        version="0.0.0"
+        dllName="TAStools.dll"
+        hasXML="false"
+        hasLevelXML="false"
+        author="thelivingdiamond">
+</Mod>

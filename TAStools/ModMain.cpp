@@ -7,6 +7,7 @@
 #include <Prey/CryInput/IHardwareMouse.h>
 #include <Prey/CryInput/mouse.h>
 #include <Prey/GameDll/ark/player/ArkPlayer.h>
+#include "InputNameMap.h"
 
 
 ModMain* gMod = nullptr;
@@ -73,7 +74,6 @@ void ModMain::InitGame(bool isHotReloading)
 	BaseClass::InitGame(isHotReloading);
     m_inputRecorder = std::make_unique<InputRecorder>();
     m_inputRecorder->registerListener();
-    m_inputsFileParser = std::make_unique<InputsFileParser>();
 }
 
 void ModMain::ShutdownGame(bool isHotUnloading)
@@ -132,7 +132,7 @@ void ModMain::Draw()
         if(ImGui::Button("Step")){
             m_bStep = true;
         }
-
+/*
         static std::string inputFileName = "inputs.txt";
         ImGui::InputText("Input File", &inputFileName);
         if(ImGui::Button("Load Inputs")){
@@ -178,7 +178,7 @@ void ModMain::Draw()
                 if(!frameInputs.m_keyboardInputs.empty()) {
                     ImGui::Text("Key Inputs");
                     for (auto &keyInput: frameInputs.m_keyboardInputs) {
-                        ImGui::Text("Key: %u", keyInput.m_keyId);
+                        ImGui::Text("Key: %s", gEnv->pInput->GetKeyName(keyInput.m_keyId));
                     }
                 }
                 if(frameInputs.m_bBlankFrame){
@@ -188,6 +188,7 @@ void ModMain::Draw()
             }
             ImGui::EndTable();
         }
+        */
 
 	}
 
@@ -251,6 +252,9 @@ void ModMain::LateUpdate(unsigned int updateFlags) {
 }
 
 void ModMain::UpdateBeforePhysics(unsigned int updateFlags) {
+    static int frameTimer = 0;
+    static const int frameLimit = 3;
+    static const int framesPressed = 2;
     if(m_bFUCK){
         //! WORKS!!!!!!!!!
       /*  ArkPlayer* player = ArkPlayer::GetInstancePtr();
@@ -271,28 +275,49 @@ void ModMain::UpdateBeforePhysics(unsigned int updateFlags) {
         //	float value;
         //	SInputSymbol *pSymbol;
         //	unsigned __int8 deviceIndex;
-        event.deviceType = eIDT_Mouse;
+        /*event.deviceType = eIDT_Mouse;
         event.state = eIS_Changed;
         event.inputChar = L' ';
         event.keyName.key = "maxis_x";
-        event.keyId = eKI_Space;
+        event.keyId = eKI_MouseX;
         event.pSymbol = nullptr;
         event.modifiers = 0;
         event.value = 2.0f;
         event.deviceIndex = 0;
-        gEnv->pInput->PostInputEvent(&event, false);
-
-        SInputEvent event2{};
-        event2.deviceType = eIDT_Mouse;
-        event2.state = eIS_Changed;
-        event2.inputChar = L' ';
-        event2.keyName.key = "maxis_y";
-        event2.keyId = eKI_Space;
-        event2.pSymbol = nullptr;
-        event2.modifiers = 0;
-        event2.value = 2.0f;
-        event2.deviceIndex = 0;
-        gEnv->pInput->PostInputEvent(&event2, false);
+        gEnv->pInput->PostInputEvent(&event, false);*/
+        if(frameTimer > (frameLimit - framesPressed)) {
+            SInputEvent event2{};
+            event2.deviceType = eIDT_Mouse;
+            event2.state = eIS_Pressed;
+            event2.inputChar = L' ';
+            event2.keyName.key = gEnv->pInput->GetKeyName(eKI_Mouse1);
+            event2.keyId = eKI_Mouse1;
+            event2.pSymbol = nullptr;
+            event2.modifiers = 0;
+            event2.value = 2.0f;
+            event2.deviceIndex = 0;
+            gEnv->pInput->PostInputEvent(&event2, false);
+            if(frameTimer >= frameLimit){
+                frameTimer = 0;
+            } else {
+                frameTimer++;
+            }
+        } else if (frameTimer == 0){
+            SInputEvent event2{};
+            event2.deviceType = eIDT_Mouse;
+            event2.state = eIS_Released;
+            event2.inputChar = L' ';
+            event2.keyName.key = gEnv->pInput->GetKeyName(eKI_Mouse1);
+            event2.keyId = eKI_Mouse1;
+            event2.pSymbol = nullptr;
+            event2.modifiers = 0;
+            event2.value = 2.0f;
+            event2.deviceIndex = 0;
+            gEnv->pInput->PostInputEvent(&event2, false);
+            frameTimer++;
+        } else {
+            frameTimer++;
+        }
 
     }
 }

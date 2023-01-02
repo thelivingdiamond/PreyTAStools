@@ -1,2 +1,4 @@
-//|Mxpos:ypos:X:12345
-|Kffe1:20:ff53|M202:264:A:1....
+|Mxpos:ypos
+|K(0xEKeyId):(0xEKeyID2):...
+|V[CVAR_NAME]:[CVAR_VALUE]
+|C"Comment text"
