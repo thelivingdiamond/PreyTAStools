@@ -74,6 +74,9 @@ void ModMain::InitGame(bool isHotReloading)
 	BaseClass::InitGame(isHotReloading);
     m_inputRecorder = std::make_unique<InputRecorder>();
     m_inputRecorder->registerListener();
+
+    m_tasFile = std::make_unique<TASFile>();
+    m_tasReplayer = std::make_unique<TASReplayer>();
 }
 
 void ModMain::ShutdownGame(bool isHotUnloading)
@@ -104,6 +107,12 @@ void ModMain::DrawMenuBar(){
 
 void ModMain::Draw()
 {
+    if(ImGui::IsKeyPressed(ImGuiKey_LeftBracket)){
+        m_bFUCK = !m_bFUCK;
+    }
+    if(ImGui::IsKeyPressed(ImGuiKey_RightBracket)){
+        m_tasFile->m_TASActions.resetFrameNumber();
+    }
 	DrawMenuBar();
     if(!m_bDrawGUI)
         return;
@@ -112,32 +121,26 @@ void ModMain::Draw()
 	if (ImGui::Begin("TAS Tools", &m_bDrawGUI)){
         auto input = (CBaseInput*)gEnv->pInput;
         ImGui::Text("Input");
-        ImGui::Text("Event Posting Enabled: %s", input->m_enableEventPosting ? "true" : "false");
-        if(ImGui::Button("Toggle Event Posting")){
-            input->m_enableEventPosting = !input->m_enableEventPosting;
-
-        }
         ImGui::Checkbox("FUCK", &m_bFUCK);
         auto system = (CSystem*)gEnv->pSystem;
-
         ImGui::Text("NoUpdate: %u", system->m_bNoUpdate);
         ImGui::Text("Paused: %u", gEnv->pGame->GetIGameFramework()->IsGamePaused());
-        if(ImGui::Button("No Update")){
+        if(ImGui::Button("No Update")) {
             pauseUpdate(true);
         }
-        if(ImGui::Button("Update")){
+        if(ImGui::Button("Update")) {
             pauseUpdate(false);
         }
         //step
-        if(ImGui::Button("Step")){
+        if(ImGui::Button("Step")) {
             m_bStep = true;
         }
-/*
         static std::string inputFileName = "inputs.txt";
         ImGui::InputText("Input File", &inputFileName);
         if(ImGui::Button("Load Inputs")){
-            m_inputsFileParser->parseInputsFile(inputFileName);
+            m_tasFile->loadTASFile(inputFileName);
         }
+        ImGui::Text("Frame: %llu", m_tasFile->m_TASActions.m_currentFrameNumber);
         static int clipLimit = 100;
         ImGui::InputInt("Clip Limit", &clipLimit);
         int clip = 0;
@@ -145,7 +148,7 @@ void ModMain::Draw()
             ImGui::TableSetupColumn("Frame", ImGuiTableColumnFlags_WidthFixed);
             ImGui::TableSetupColumn("Input");
             ImGui::TableHeadersRow();
-            for (auto &frameInputs: m_inputsFileParser->m_frameInputs) {
+            for (auto &frame: m_tasFile->m_TASActions.m_frames) {
                 if(clip > clipLimit) {
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
@@ -154,41 +157,41 @@ void ModMain::Draw()
                 }
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
-                ImGui::Text("Frame %llu", frameInputs.m_frameNumber);
+                ImGui::Text("Frame %llu", frame.m_frameNumber);
                 ImGui::TableNextColumn();
-                if(!frameInputs.m_mouseInputs.empty()) {
-                    ImGui::Text("Mouse Inputs");
-                    for (auto &mouseInput: frameInputs.m_mouseInputs) {
-                        ImGui::Text("XPos: %f, YPos: %f, %s", mouseInput.m_xPos, mouseInput.m_yPos, mouseInput.m_Absolute ? "Absolute" : "Relative");
-                        ImGui::Text("M1: %u\n"
-                                    "M2: %u\n"
-                                    "M3: %u\n"
-                                    "M4: %u\n"
-                                    "M5: %u\n",
-                                    mouseInput.m_leftButton,
-                                    mouseInput.m_rightButton,
-                                    mouseInput.m_middleButton,
-                                    mouseInput.m_xButton1,
-                                    mouseInput.m_xButton2);
+                if(frame.empty()){
+                    ImGui::Text("No Inputs");
+                }
+                for(auto& action: frame.m_actions){
+                    switch(action->getType()){
+                        case Action::Type::KEYBOARD:
+                            ImGui::Text("Key: %s", gEnv->pInput->GetKeyName(static_cast<KeyboardAction*>(action)->m_keyId));
+                            break;
+                        case Action::Type::MOUSE:
+                            ImGui::Text("XPos: %f, YPos: %f, %s", static_cast<MouseAction*>(action)->m_xPos, static_cast<MouseAction*>(action)->m_yPos, static_cast<MouseAction*>(action)->m_Absolute ? "Absolute" : "Relative");
+                            ImGui::Text("M1: %u\n"
+                                        "M2: %u\n"
+                                        "M3: %u\n"
+                                        "M4: %u\n"
+                                        "M5: %u\n",
+                                        static_cast<MouseAction*>(action)->m_leftButton,
+                                        static_cast<MouseAction*>(action)->m_rightButton,
+                                        static_cast<MouseAction*>(action)->m_middleButton,
+                                        static_cast<MouseAction*>(action)->m_xButton1,
+                                        static_cast<MouseAction*>(action)->m_xButton2);
+                            break;
+                        case Action::Type::CVAR:
+                            ImGui::Text("CVar: %s, Value: %s", static_cast<CVarAction*>(action)->m_cvarName.c_str(), static_cast<CVarAction*>(action)->m_cvarValue.c_str());
+                            break;
+                        case Action::Type::COMMENT:
+                            ImGui::Text("Comment: %s", static_cast<CommentAction*>(action)->m_comment.c_str());
+                            break;
                     }
-                }
-                if(!frameInputs.m_mouseInputs.empty() && !frameInputs.m_keyboardInputs.empty()){
-                    ImGui::Separator();
-                }
-                if(!frameInputs.m_keyboardInputs.empty()) {
-                    ImGui::Text("Key Inputs");
-                    for (auto &keyInput: frameInputs.m_keyboardInputs) {
-                        ImGui::Text("Key: %s", gEnv->pInput->GetKeyName(keyInput.m_keyId));
-                    }
-                }
-                if(frameInputs.m_bBlankFrame){
-                    ImGui::Text("Blank Frame");
                 }
                 clip++;
             }
             ImGui::EndTable();
         }
-        */
 
 	}
 
@@ -200,12 +203,12 @@ void ModMain::MainUpdate(unsigned updateFlags)
     if(ImGui::IsKeyPressed(ImGuiKey_LeftBracket)){
         m_bStep = true;
     }
-    if(m_bStep){
-        m_bStep = false;
-        pauseUpdate(false);
-    } else {
-        pauseUpdate(m_bPause);
-    }
+//    if(m_bStep){
+//        m_bStep = false;
+//        pauseUpdate(false);
+//    } else {
+//        pauseUpdate(m_bPause);
+//    }
 }
 
 
@@ -252,10 +255,15 @@ void ModMain::LateUpdate(unsigned int updateFlags) {
 }
 
 void ModMain::UpdateBeforePhysics(unsigned int updateFlags) {
+    //TODO:
+    if(m_bFUCK){
+        m_tasFile->m_TASActions.executeFrame();
+    }
+    m_tasReplayer->Update();
     static int frameTimer = 0;
     static const int frameLimit = 3;
     static const int framesPressed = 2;
-    if(m_bFUCK){
+    if(false){
         //! WORKS!!!!!!!!!
       /*  ArkPlayer* player = ArkPlayer::GetInstancePtr();
         ArkPlayerInput* playerInput;

@@ -3,7 +3,9 @@
 //
 
 #include <sstream>
+#include <utility>
 #include "Actions.h"
+#include <Prey/CryInput/IHardwareMouse.h>
 
 KeyboardAction::KeyboardAction(std::string &inputString) {
     parseString(inputString);
@@ -22,7 +24,7 @@ void KeyboardAction::parseString(std::string &inputString) {
 }
 
 void KeyboardAction::execute() {
-    //TODO: implement
+    Actions::pressKey(m_keyId);
 }
 
 Action::Type KeyboardAction::getType() {
@@ -86,11 +88,27 @@ void MouseAction::parseString(std::string &inputString) {
 }
 
 void MouseAction::execute() {
-    //TODO: implement
+    Actions::moveMouse(m_xPos, m_yPos, m_Absolute);
+    if (m_leftButton) {
+        Actions::pressKey(EKeyId::eKI_Mouse1);
+    }
+    if (m_rightButton) {
+        Actions::pressKey(EKeyId::eKI_Mouse2);
+    }
+    if (m_middleButton) {
+        Actions::pressKey(EKeyId::eKI_Mouse3);
+    }
+    if (m_xButton1) {
+        Actions::pressKey(EKeyId::eKI_Mouse4);
+    }
+    if (m_xButton2) {
+        Actions::pressKey(EKeyId::eKI_Mouse5);
+    }
+
 }
 
 Action::Type MouseAction::getType() {
-    return Action::Type::COMMENT;
+    return m_type;
 }
 
 MouseAction::MouseAction(float x, float y, bool abs, uint32_t buttons) {
@@ -136,16 +154,16 @@ void CVarAction::parseString(std::string &inputString) {
 }
 
 void CVarAction::execute() {
-
+    gEnv->pConsole->GetCVar(m_cvarName.c_str())->Set(m_cvarValue.c_str());
 }
 
 Action::Type CVarAction::getType() {
-    return Action::Type::COMMENT;
+    return m_type;
 }
 
 CVarAction::CVarAction(std::string cvar, std::string value) {
-    m_cvarName = cvar;
-    m_cvarValue = value;
+    m_cvarName = std::move(cvar);
+    m_cvarValue = std::move(value);
 
 }
 
@@ -170,9 +188,94 @@ void CommentAction::execute() {
 }
 
 Action::Type CommentAction::getType() {
-    return Action::Type::COMMENT;
+    return m_type;
 }
 
 std::string CommentAction::toString() {
     return "\"" + m_comment + "\"";
+}
+
+
+
+void Actions::releaseKey(EKeyId keyId) {
+    if(keyId == EKeyId::eKI_Mouse1 || keyId == EKeyId::eKI_Mouse2 || keyId == EKeyId::eKI_Mouse3 || keyId == EKeyId::eKI_Mouse4 || keyId == EKeyId::eKI_Mouse5){
+        SInputEvent event{};
+        event.deviceType = eIDT_Mouse;
+        event.keyId = keyId;
+        event.keyName.key = gEnv->pInput->GetKeyName(keyId);
+        event.state = eIS_Released;
+        event.modifiers = 0;
+        event.deviceIndex = 0;
+        event.value = 0;
+        event.pSymbol = nullptr;
+        gEnv->pInput->PostInputEvent(&event, true);
+    } else {
+        SInputEvent event{};
+        event.deviceType = eIDT_Keyboard;
+        event.keyId = keyId;
+        event.keyName.key = gEnv->pInput->GetKeyName(keyId);
+        event.state = eIS_Released;
+        event.modifiers = 0;
+        event.deviceIndex = 0;
+        event.value = 0;
+        event.pSymbol = nullptr;
+        gEnv->pInput->PostInputEvent(&event, true);
+    }
+}
+
+void Actions::pressKey(EKeyId keyId) {
+    if(keyId == EKeyId::eKI_Mouse1 || keyId == EKeyId::eKI_Mouse2 || keyId == EKeyId::eKI_Mouse3 || keyId == EKeyId::eKI_Mouse4 || keyId == EKeyId::eKI_Mouse5){
+        SInputEvent event{};
+        event.deviceType = eIDT_Mouse;
+        event.keyId = keyId;
+        event.keyName.key = gEnv->pInput->GetKeyName(keyId);
+        event.state = eIS_Pressed;
+        event.modifiers = 0;
+        event.deviceIndex = 0;
+        event.value = 0;
+        event.pSymbol = nullptr;
+        gEnv->pInput->PostInputEvent(&event, true);
+    } else {
+        SInputEvent event{};
+        event.deviceType = eIDT_Keyboard;
+        event.keyId = keyId;
+        event.keyName.key = gEnv->pInput->GetKeyName(keyId);
+        event.state = eIS_Pressed;
+        event.modifiers = 0;
+        event.deviceIndex = 0;
+        event.value = 0;
+        event.pSymbol = nullptr;
+        gEnv->pInput->PostInputEvent(&event, true);
+    }
+}
+
+void Actions::moveMouse(float x, float y, bool abs) {
+    if(abs) {
+        // used for menu navigation
+        gEnv->pHardwareMouse->SetHardwareMouseClientPosition(x, y);
+    } else {
+        // used for aiming
+        SInputEvent eventX{};
+        eventX.deviceType = eIDT_Mouse;
+        eventX.keyId = EKeyId::eKI_MouseX;
+        eventX.keyName.key = gEnv->pInput->GetKeyName(EKeyId::eKI_MouseX);
+        eventX.state = eIS_Changed;
+        eventX.modifiers = 0;
+        eventX.deviceIndex = 0;
+        eventX.value = x;
+        eventX.pSymbol = nullptr;
+        gEnv->pInput->PostInputEvent(&eventX, true);
+
+        SInputEvent eventY{};
+        eventY.deviceType = eIDT_Mouse;
+        eventY.keyId = EKeyId::eKI_MouseY;
+        eventY.keyName.key = gEnv->pInput->GetKeyName(EKeyId::eKI_MouseY);
+        eventY.state = eIS_Changed;
+        eventY.modifiers = 0;
+        eventY.deviceIndex = 0;
+        eventY.value = y;
+        eventY.pSymbol = nullptr;
+        gEnv->pInput->PostInputEvent(&eventY, true);
+    }
+
 }

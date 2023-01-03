@@ -6,7 +6,7 @@
 
 void TASFile::loadTASFile(fs::path szTASFile) {
     m_TASActions.parseFile(szTASFile);
-
+    OverlayLog("Loaded TAS file: %s", szTASFile.string().c_str());
 }
 
 void TASFile::saveTASFile(fs::path szTASFile) {

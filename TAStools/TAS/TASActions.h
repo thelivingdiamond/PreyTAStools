@@ -22,6 +22,7 @@ public:
     void addFrame(Frame & frame);
     void removeFrame(uint64_t frameNumber);
     void executeFrame();
+    void resetFrameNumber();
 
 };
 

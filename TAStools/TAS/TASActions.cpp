@@ -68,3 +68,7 @@ void TASActions::saveFile(fs::path &filePath) {
     }
     inputsFile.close();
 }
+
+void TASActions::resetFrameNumber() {
+    m_currentFrameNumber = 0;
+}

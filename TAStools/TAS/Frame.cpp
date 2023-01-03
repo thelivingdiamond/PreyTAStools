@@ -3,6 +3,7 @@
 //
 
 #include "Frame.h"
+#include "TASReplayer.h"
 #include <regex>
 
 Frame::Frame(std::string &inputString, uint64_t frameNumber) {
@@ -101,7 +102,7 @@ void Frame::parseString(std::string &inputString) {
 
 void Frame::execute() {
     for (auto & action : m_actions) {
-        action->execute();
+        TASReplayer::getInstance()->submitAction(action);
     }
 }
 

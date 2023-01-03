@@ -82,5 +82,9 @@ struct CommentAction : public Action {
     Type getType() override;
     std::string m_comment;
 };
-
+namespace Actions {
+    void releaseKey(EKeyId keyId);
+    void pressKey(EKeyId keyId);
+    void moveMouse(float x, float y, bool abs);
+}
 #endif //TASTOOLS_ACTIONS_H
