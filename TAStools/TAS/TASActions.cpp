@@ -72,3 +72,23 @@ void TASActions::saveFile(fs::path &filePath) {
 void TASActions::resetFrameNumber() {
     m_currentFrameNumber = 0;
 }
+
+void TASActions::addFrame(std::vector<SInputEvent> &events) {
+    Frame frame(events, m_frameCount);
+    m_frames.push_back(frame);
+    m_frameCount++;
+
+}
+
+void TASActions::clear() {
+    m_frames.clear();
+    m_frameCount = 0;
+    m_currentFrameNumber = 0;
+}
+
+bool TASActions::verifyFrame(std::vector<SInputEvent> inputs) {
+    if(m_currentFrameNumber >= m_frameCount) {
+        return false;
+    }
+    return m_frames[m_currentFrameNumber].verify(inputs);
+}

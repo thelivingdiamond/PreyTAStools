@@ -48,12 +48,12 @@ struct TASInfo {
     //! load from pugi::xml_node
     bool loadFromXML(const pugi::xml_node& node){
         m_tasName = node.attribute("name").as_string();
-        m_version = SemanticVersion(node.attribute("version").as_string());
+        m_version = SemanticVersion((const char *)node.attribute("version").value());
         m_movieFPS = node.attribute("movie_fps").as_float();
         m_movieFrameCount = node.attribute("movie_frame_count").as_ullong();
         m_physicsFrameTime = node.attribute("physics_frame_time").as_float();
         m_physicsFrameCount = node.attribute("physics_frame_count").as_ullong();
-        m_TAStoolsVersion = SemanticVersion(node.attribute("tas_tools_version").as_string());
+        m_TAStoolsVersion = SemanticVersion((const char *)node.attribute("tas_tools_version").value());
         m_CVars.clear();
         for (auto& cvar : node.child("CVARS").children("CVAR")) {
             m_CVars.emplace_back(cvar.attribute("name").as_string(), cvar.attribute("value").as_string());

@@ -6,7 +6,7 @@ set(SOURCE_FILES
 		pch.h
 		#Mod Main
 		ModMain.cpp ModMain.h
-		InputRecorder.cpp InputRecorder.h
+        InputListener.cpp InputListener.h
 		InputNameMap.h
 		TAS/TASInfo.h TAS/TASInfo.cpp
 		TAS/TASFile.cpp TAS/TASFile.h
@@ -14,7 +14,7 @@ set(SOURCE_FILES
 		TAS/Actions.cpp TAS/Actions.h
 		TAS/Frame.cpp TAS/Frame.h
 		TAS/TASReplayer.cpp TAS/TASReplayer.h
-		)
+        TAS/TASPositions.cpp TAS/TASPositions.h TAS/Positions.cpp TAS/Positions.h)
 
 add_library(${MOD_NAME} SHARED ${SOURCE_FILES})
 target_link_libraries(${MOD_NAME}

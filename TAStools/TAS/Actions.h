@@ -27,11 +27,12 @@ struct KeyboardAction : public Action {
     KeyboardAction(std::string & inputString);
     void parseString(std::string & inputString) override;
 
-    KeyboardAction(EKeyId key);
+    KeyboardAction(EKeyId key, EInputState state);
     std::string toString() override;
     void execute() override;
     Type getType() override;
     EKeyId m_keyId;
+    EInputState m_keyState;
 };
 
 struct MouseAction : public Action {
@@ -41,18 +42,18 @@ MouseAction() {
     MouseAction(std::string & inputString);
     void parseString(std::string & inputString) override;
 
-    MouseAction(float x, float y, bool abs, uint32_t buttons);
+    MouseAction(float x, float y, bool abs, int left, int right, int middle, int x1, int x2);
     std::string toString() override;
     void execute() override;
     Type getType() override;
 
-    float m_xPos, m_yPos;
-    bool m_Absolute;
-    bool m_leftButton,
-            m_rightButton,
-            m_middleButton,
-            m_xButton1,
-            m_xButton2;
+    float m_xPos = 0.0f, m_yPos = 0.0f;
+    bool m_Absolute = false;
+    int     m_leftButton = -1,
+             m_rightButton = -1,
+             m_middleButton = -1,
+             m_xButton1 = -1,
+             m_xButton2 = -1;
 };
 
 struct CVarAction : public Action {
@@ -83,8 +84,10 @@ struct CommentAction : public Action {
     std::string m_comment;
 };
 namespace Actions {
+    void KeyAction(EKeyId key, EInputState state);
     void releaseKey(EKeyId keyId);
     void pressKey(EKeyId keyId);
+    void downKey(EKeyId keyId);
     void moveMouse(float x, float y, bool abs);
 }
 #endif //TASTOOLS_ACTIONS_H

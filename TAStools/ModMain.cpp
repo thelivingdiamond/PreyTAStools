@@ -7,10 +7,22 @@
 #include <Prey/CryInput/IHardwareMouse.h>
 #include <Prey/CryInput/mouse.h>
 #include <Prey/GameDll/ark/player/ArkPlayer.h>
+#include <Chairloader/IRenderAuxGeomEx.h>
 #include "InputNameMap.h"
 
 
 ModMain* gMod = nullptr;
+
+auto CMouseHook = CMouse::FUpdate.MakeHook();
+void CMouseHookFunc(CMouse* _this, bool bFocus) {
+    if(gMod) {
+        if (gMod->m_bFUCK) {
+            gMod->m_tasFile->m_TASActions.executeFrame();
+        }
+        gMod->m_tasReplayer->Update();
+    }
+    CMouseHook.InvokeOrig(_this, bFocus);
+}
 
 #ifdef EXAMPLE
 // You can define PreyDll.dll function using PreyFunction
@@ -61,6 +73,7 @@ void ModMain::InitHooks()
 	// Call SetHookFunc from here.
 	s_hook_ArkPlayer_HasAbility.SetHookFunc(&ArkPlayer_HasAbility_Hook);
 #endif
+    CMouseHook.SetHookFunc(&CMouseHookFunc);
 }
 
 void ModMain::InitSystem(const ModInitInfo& initInfo, ModDllInfo& dllInfo)
@@ -72,7 +85,7 @@ void ModMain::InitSystem(const ModInitInfo& initInfo, ModDllInfo& dllInfo)
 void ModMain::InitGame(bool isHotReloading)
 {
 	BaseClass::InitGame(isHotReloading);
-    m_inputRecorder = std::make_unique<InputRecorder>();
+    m_inputRecorder = std::make_unique<InputListener>();
     m_inputRecorder->registerListener();
 
     m_tasFile = std::make_unique<TASFile>();
@@ -113,18 +126,27 @@ void ModMain::Draw()
     if(ImGui::IsKeyPressed(ImGuiKey_RightBracket)){
         m_tasFile->m_TASActions.resetFrameNumber();
     }
+    if(ImGui::IsKeyPressed(ImGuiKey_Backslash)){
+        m_bRecordingInputs = !m_bRecordingInputs;
+    }
+    ImGui::BeginDisabled(m_bRecordingInputs | m_bFUCK);
+
 	DrawMenuBar();
-    if(!m_bDrawGUI)
+    if(!m_bDrawGUI) {
+        ImGui::EndDisabled();
         return;
+    }
 
     ImGui::SetNextWindowBgAlpha(1.0f);
 	if (ImGui::Begin("TAS Tools", &m_bDrawGUI)){
         auto input = (CBaseInput*)gEnv->pInput;
         ImGui::Text("Input");
         ImGui::Checkbox("FUCK", &m_bFUCK);
+        ImGui::Checkbox("Record", &m_bRecordingInputs);
         auto system = (CSystem*)gEnv->pSystem;
         ImGui::Text("NoUpdate: %u", system->m_bNoUpdate);
         ImGui::Text("Paused: %u", gEnv->pGame->GetIGameFramework()->IsGamePaused());
+        ImGui::Text("Death Countdown: %llu", m_inputRecorder->getEventCount());
         if(ImGui::Button("No Update")) {
             pauseUpdate(true);
         }
@@ -139,6 +161,12 @@ void ModMain::Draw()
         ImGui::InputText("Input File", &inputFileName);
         if(ImGui::Button("Load Inputs")){
             m_tasFile->loadTASFile(inputFileName);
+        }
+        if(ImGui::Button("Save Inputs")){
+            m_tasFile->saveTASFile(inputFileName);
+        }
+        if(ImGui::Button("Clear Inputs")){
+            m_tasFile->m_TASActions.clear();
         }
         ImGui::Text("Frame: %llu", m_tasFile->m_TASActions.m_currentFrameNumber);
         static int clipLimit = 100;
@@ -165,15 +193,15 @@ void ModMain::Draw()
                 for(auto& action: frame.m_actions){
                     switch(action->getType()){
                         case Action::Type::KEYBOARD:
-                            ImGui::Text("Key: %s", gEnv->pInput->GetKeyName(static_cast<KeyboardAction*>(action)->m_keyId));
+                            ImGui::Text("Key: %s [%i]", gEnv->pInput->GetKeyName(static_cast<KeyboardAction*>(action)->m_keyId), static_cast<KeyboardAction*>(action)->m_keyState);
                             break;
                         case Action::Type::MOUSE:
                             ImGui::Text("XPos: %f, YPos: %f, %s", static_cast<MouseAction*>(action)->m_xPos, static_cast<MouseAction*>(action)->m_yPos, static_cast<MouseAction*>(action)->m_Absolute ? "Absolute" : "Relative");
-                            ImGui::Text("M1: %u\n"
-                                        "M2: %u\n"
-                                        "M3: %u\n"
-                                        "M4: %u\n"
-                                        "M5: %u\n",
+                            ImGui::Text("M1: %i\n"
+                                        "M2: %i\n"
+                                        "M3: %i\n"
+                                        "M4: %i\n"
+                                        "M5: %i\n",
                                         static_cast<MouseAction*>(action)->m_leftButton,
                                         static_cast<MouseAction*>(action)->m_rightButton,
                                         static_cast<MouseAction*>(action)->m_middleButton,
@@ -194,21 +222,23 @@ void ModMain::Draw()
         }
 
 	}
-
 	ImGui::End();
+    if(ImGui::Begin("Debug")){
+        if(ImGui::Button("Test Add Player Position Frame")){
+            m_tasFile->m_TASPositions.addFrame(ArkPlayer::GetInstancePtr()->GetEntity());
+        }
+        for(auto& position : m_tasFile->m_TASPositions.m_frames){
+            ImGui::Text("Position: %f, %f, %f", position.m_position.x, position.m_position.y, position.m_position.z);
+            ImGui::Text("Rotation: %f, %f, %f, %f", position.m_rotation.v.x, position.m_rotation.v.y, position.m_rotation.v.z, position.m_rotation.w);
+            ImGui::Text("Velocity: %f, %f, %f", position.m_velocity.x, position.m_velocity.y, position.m_velocity.z);
+        }
+    }
+    ImGui::End();
+    ImGui::EndDisabled();
 }
 
 void ModMain::MainUpdate(unsigned updateFlags)
 {
-    if(ImGui::IsKeyPressed(ImGuiKey_LeftBracket)){
-        m_bStep = true;
-    }
-//    if(m_bStep){
-//        m_bStep = false;
-//        pauseUpdate(false);
-//    } else {
-//        pauseUpdate(m_bPause);
-//    }
 }
 
 
@@ -249,17 +279,48 @@ void ModMain::pauseUpdate(bool pause) {
 }
 
 void ModMain::UpdateBeforeSystem(unsigned int updateFlags) {
+    if(!m_bRecordingInputs) {
+        Vec3 last_position(ZERO);
+        int i = 0;
+        static const int frameSkip = 5;
+        for (auto &position: m_tasFile->m_TASPositions.m_frames) {
+            if (last_position.IsZero() || last_position == position.m_position) {
+                last_position = position.m_position;
+                continue;
+            }
+            if(i % frameSkip != 0) {
+                i++;
+                continue;
+            }
+            gEnv->pAuxGeomRenderer->DrawLine(last_position, ColorB(255, 0, 0, 255), position.m_position, ColorB(255, 0, 0, 255));
+            last_position = position.m_position;
+            i++;
+//        gEnv->pAuxGeomRenderer->DrawSphere(position.m_position, 0.001f, ColorB(255, 0, 0, 255), false);
+//        gEnv->pAuxGeomRenderer->DrawLine(position.m_position, ColorB(255, 0, 0, 255), position.m_position + position.m_velocity * 0.1f, ColorB(255, 255, 0, 255));
+        }
+    }
 }
 
 void ModMain::LateUpdate(unsigned int updateFlags) {
+    if(m_bRecordingInputs) {
+        std::vector<SInputEvent> events;
+        m_inputRecorder->getEvents(events);
+        m_tasFile->m_TASActions.addFrame(events);
+        m_tasFile->m_TASPositions.addFrame(ArkPlayer::GetInstancePtr()->GetEntity());
+    } else if(m_bFUCK && m_bVerifyingInputs) {
+        std::vector<SInputEvent> events;
+        m_inputRecorder->getEvents(events);
+        if(!m_tasFile->m_TASActions.verifyFrame(events) && m_tasFile->m_TASActions.m_currentFrameNumber < m_tasFile->m_TASActions.m_frameCount) {
+            CryError("Input verification failed! {}", m_tasFile->m_TASActions.m_currentFrameNumber);
+        }
+    } else {
+        m_inputRecorder->update();
+    }
 }
 
 void ModMain::UpdateBeforePhysics(unsigned int updateFlags) {
     //TODO:
-    if(m_bFUCK){
-        m_tasFile->m_TASActions.executeFrame();
-    }
-    m_tasReplayer->Update();
+
     static int frameTimer = 0;
     static const int frameLimit = 3;
     static const int framesPressed = 2;

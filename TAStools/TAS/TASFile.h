@@ -7,6 +7,7 @@
 
 #include "TASInfo.h"
 #include "TASActions.h"
+#include "TASPositions.h"
 
 class TASFile {
 public:
@@ -17,6 +18,7 @@ public:
 
     TASInfo m_TASInfo;
     TASActions m_TASActions;
+    TASPositions m_TASPositions;
 };
 
 

@@ -15,11 +15,14 @@ void TASReplayer::Update() {
         auto action = m_actions.front();
         m_actions.pop();
         action->execute();
-        switch(action->getType()){
+       /* switch(action->getType()){
             case Action::Type::KEYBOARD:
+//                static_cast<KeyboardAction*>(action)->execute(wasKeyJustPressed(static_cast<KeyboardAction*>(action)->m_keyId));
+                action->execute();
                 m_keysPressed.push_back(static_cast<KeyboardAction*>(action)->m_keyId);
                 break;
             case Action::Type::MOUSE:
+                action->execute();
                 if(static_cast<MouseAction*>(action)->m_leftButton){ m_keysPressed.push_back(EKeyId::eKI_Mouse1); }
                 if(static_cast<MouseAction*>(action)->m_rightButton){ m_keysPressed.push_back(EKeyId::eKI_Mouse2); }
                 if(static_cast<MouseAction*>(action)->m_middleButton){ m_keysPressed.push_back(EKeyId::eKI_Mouse3); }
@@ -28,11 +31,11 @@ void TASReplayer::Update() {
                 break;
             case Action::Type::CVAR:
             case Action::Type::COMMENT:
-                // do nothing
+                action->execute();
                 break;
-        }
+        }*/
     }
-    // determine which keys need to be released
+  /*  // determine which keys need to be released
     for(auto & key : m_keysToRelease){
         if(std::find(m_keysPressed.begin(), m_keysPressed.end(), key) == m_keysPressed.end()){
             m_keysPressed.erase(std::remove(m_keysPressed.begin(), m_keysPressed.end(), key), m_keysPressed.end());
@@ -44,7 +47,7 @@ void TASReplayer::Update() {
 
     // we should move the keys pressed this frame to the release vector
     std::move(m_keysPressed.begin(), m_keysPressed.end(), std::back_inserter(m_keysToRelease));
-    m_keysPressed.clear();
+    m_keysPressed.clear();*/
 }
 
 void TASReplayer::submitAction(Action *action) {
@@ -66,4 +69,8 @@ TASReplayer::TASReplayer() {
 
 TASReplayer::~TASReplayer() {
     m_instance = nullptr;
+}
+
+bool TASReplayer::wasKeyJustPressed(EKeyId key) {
+    return std::find(m_keysToRelease.begin(), m_keysToRelease.end(), key) != m_keysToRelease.end();
 }

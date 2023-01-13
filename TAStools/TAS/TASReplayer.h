@@ -24,6 +24,9 @@ public:
     std::vector<EKeyId> m_keysToRelease;
     std::vector<EKeyId> m_keysPressed;
 
+    bool wasKeyJustPressed(EKeyId key);
+
+
 };
 
 

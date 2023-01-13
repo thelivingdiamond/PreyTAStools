@@ -19,7 +19,56 @@ void Frame::parseString(std::string &inputString) {
     if(inputString.empty()){
         return;
     }
-    // segment the string until there are no more |
+    // the string will be passed as a series of segments that begin with a pipe, the first letter after the pipe indicates what type of segment it is
+    // the rest of the segment is the data for that segment
+    // split the string into segments using regex
+    std::regex segmentRegex("\\|([A-Z])([^|]*)");
+    std::smatch segmentMatch;
+    std::string segmentString;
+    while(std::regex_search(inputString, segmentMatch, segmentRegex)) {
+        segmentString = segmentMatch[0];
+        inputString = segmentMatch.suffix();
+        // the first character of the segment string is the type of segment
+        char segmentType = segmentString[1];
+        // the rest of the segment string is the data for the segment
+        std::string segmentData = segmentString.substr(2);
+        if(segmentType == 'K'){
+            // split the segment by colon to get each key
+            std::regex keyRegex("([^:]+):?");
+            std::smatch keyMatch;
+            std::string keyString;
+            while(std::regex_search(segmentData, keyMatch, keyRegex)) {
+                keyString = keyMatch.str(1);
+                segmentData = keyMatch.suffix();
+                //TODO: see if this works
+                m_actions.push_back(new KeyboardAction(keyString));
+            }
+
+        } else if(segmentType =='M') {
+            // the entire data segment can just be passed to the mouse action
+            m_actions.push_back(new MouseAction(segmentData));
+        } else if(segmentType =='V') {
+            // the CVAR segment is a colon separated list of CVARs, each in the form of <CVARNAME, CVARVALUE>, we just need to pass everything between the colons to the CVAR action, the action will parse the data
+            // split the segment by colon to get each key
+            // the regex needs to group items like <"", "">, and each group is separated by a colon
+            std::regex cvarRegex("([^:]+):?");
+            std::smatch cvarMatch;
+            std::string cvarString;
+            while(std::regex_search(segmentData, cvarMatch, cvarRegex)) {
+                cvarString = cvarMatch.str(1);
+                segmentData = cvarMatch.suffix();
+                addAction(new CVarAction(cvarString));
+            }
+
+        } else if (segmentType == 'C'){
+            // pass the segment minus the first character to the comment action
+            auto commentString = segmentString.substr(2);
+            m_actions.push_back(new CommentAction(commentString));
+//            m_actions.push_back(new CommentAction(segmentString));
+        }
+    }
+
+    /*// segment the string until there are no more |
     auto segmentedString = inputString;
     bool error = false;
     while(!segmentedString.empty()) {
@@ -97,7 +146,7 @@ void Frame::parseString(std::string &inputString) {
             CryWarning("Invalid frame input prefix: {}", inputString.c_str());
             error = true;
         }
-    }
+    }*/
 }
 
 void Frame::execute() {
@@ -120,21 +169,190 @@ void Frame::clearActions() {
 
 std::string Frame::toString() {
     std::string outputString;
+    std::string KeyboardString, MouseString, CVarString, CommentString;
     for (auto & action : m_actions) {
         switch(action->getType()){
             case Action::Type::KEYBOARD:
-                outputString += "|K" + action->toString();
+                if(KeyboardString.empty()) {
+                    KeyboardString += "|K";
+                    KeyboardString += action->toString();
+                } else {
+                    KeyboardString += ":";
+                    KeyboardString += action->toString();
+                }
                 break;
             case Action::Type::MOUSE:
-                outputString += "|M" + action->toString();
+                MouseString = "|M" + action->toString();
                 break;
             case Action::Type::CVAR:
-                outputString += "|V" + action->toString();
+                if(CVarString.empty()) {
+                    CVarString += "|V";
+                    CVarString += action->toString();
+                } else {
+                    CVarString += ":";
+                    CVarString += action->toString();
+                }
                 break;
             case Action::Type::COMMENT:
-                outputString += "|C" + action->toString();
+                CommentString = "|C" + action->toString();
                 break;
         }
     }
+    if(!KeyboardString.empty()) {
+        outputString += KeyboardString;
+    }
+    if(!MouseString.empty()) {
+        outputString += MouseString;
+    }
+    if(!CVarString.empty()) {
+        outputString += CVarString;
+    }
+    if(!CommentString.empty()) {
+        outputString += CommentString;
+    }
     return outputString;
+}
+
+Frame::Frame(std::vector<SInputEvent> &events, uint64_t frameNumber) {
+    parseEvents(events);
+    m_frameNumber = frameNumber;
+}
+
+void Frame::parseEvents(std::vector<SInputEvent> &events) {
+    m_actions.clear();
+    if(events.empty()){
+        return;
+    }
+    // mouse variables
+    float xPos = 0, yPos = 0;
+    int left = -1, right = -1, middle = -1, x1 = -1, x2 = -1;
+    bool bMouseChanged = false;
+    // TODO: absolute mouse position is not supported yet
+    for (auto & event : events) {
+        if(event.state == eIS_UI){
+            //convert from keyName to keyID FUCK why isn't there a function for this
+            std::wstring string;
+            string.resize(1);
+            string[0] = event.inputChar;
+            auto symbol = gEnv->pInput->LookupSymbolByName(event.deviceType, 0, fs::path(string).u8string().c_str());
+            if(symbol != nullptr){
+                event.keyId = symbol->keyId;
+            } else {
+                CryWarning("Invalid key name: {}", event.keyName.key);
+            }
+        }
+        if(event.deviceType == eIDT_Keyboard) {
+            // construct a string from the event
+            KeyboardAction *action = new KeyboardAction(event.keyId, event.state);
+            addAction(action);
+        } else if(event.deviceType == eIDT_Mouse) {
+            if(event.keyId == EKeyId::eKI_MouseX) {
+                xPos = event.value;
+                bMouseChanged |= true;
+            } else if (event.keyId == EKeyId::eKI_MouseY) {
+                yPos = event.value;
+                bMouseChanged |= true;
+            } else if (event.keyId == EKeyId::eKI_Mouse1) {
+                left = event.state;
+                bMouseChanged |= true;
+            } else if (event.keyId == EKeyId::eKI_Mouse2) {
+                right = event.state;
+                bMouseChanged |= true;
+            } else if (event.keyId == EKeyId::eKI_Mouse3) {
+                middle = event.state;
+                bMouseChanged |= true;
+            } else if (event.keyId == EKeyId::eKI_Mouse4) {
+                x1 = event.state;
+                bMouseChanged |= true;
+            } else if (event.keyId == EKeyId::eKI_Mouse5) {
+                x2 = event.state;
+                bMouseChanged |= true;
+            }
+        }
+    }
+    if(bMouseChanged){
+        auto action = new MouseAction(xPos, yPos, false, left, right, middle, x1, x2);
+        addAction(action);
+    }
+}
+
+Frame::Frame(uint64_t frameNumber) {
+    m_frameNumber = frameNumber;
+}
+
+bool Frame::verify(std::vector<SInputEvent> inputs) {
+    // go through each input that was recorded and make sure it matches the frame
+    // if it doesn't match, return false
+    // first check for the empty frame case both ways
+    if(inputs.empty() && m_actions.empty()){
+        return true;
+    } else if(inputs.empty() || m_actions.empty()){
+        return false;
+    }
+    for(auto & input : inputs){
+        if(input.deviceType == eIDT_Keyboard){
+            // check if the keyboard input is in the frame
+            bool found = false;
+            for(auto & action : m_actions){
+                if(action->getType() == Action::Type::KEYBOARD){
+                    auto keyboardAction = static_cast<KeyboardAction*>(action);
+                    if(keyboardAction->m_keyId == input.keyId && keyboardAction->m_keyState == input.state){
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            if(!found){
+                return false;
+            }
+        } else if(input.deviceType == eIDT_Mouse){
+            // check if the mouse input is in the frame
+            bool found = false;
+            for(auto & action : m_actions){
+                if(action->getType() == Action::Type::MOUSE){
+                    auto mouseAction = static_cast<MouseAction*>(action);
+                    if(input.keyId == EKeyId::eKI_MouseX){
+                        if(mouseAction->m_xPos == input.value){
+                            found = true;
+                            break;
+                        }
+                    } else if(input.keyId == EKeyId::eKI_MouseY){
+                        if(mouseAction->m_yPos == input.value){
+                            found = true;
+                            break;
+                        }
+                    } else if(input.keyId == EKeyId::eKI_Mouse1){
+                        if(mouseAction->m_leftButton == input.state){
+                            found = true;
+                            break;
+                        }
+                    } else if(input.keyId == EKeyId::eKI_Mouse2){
+                        if(mouseAction->m_rightButton == input.state){
+                            found = true;
+                            break;
+                        }
+                    } else if(input.keyId == EKeyId::eKI_Mouse3){
+                        if(mouseAction->m_middleButton == input.state){
+                            found = true;
+                            break;
+                        }
+                    } else if(input.keyId == EKeyId::eKI_Mouse4){
+                        if(mouseAction->m_xButton1 == input.state){
+                            found = true;
+                            break;
+                        }
+                    } else if(input.keyId == EKeyId::eKI_Mouse5){
+                        if(mouseAction->m_xButton2 == input.state){
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            if(!found){
+                return false;
+            }
+        }
+    }
+    return true;
 }

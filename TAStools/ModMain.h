@@ -1,6 +1,6 @@
 #pragma once
 #include <ChairLoader/ModSDK/ChairloaderModBase.h>
-#include "InputRecorder.h"
+#include "InputListener.h"
 #include "TAS/TASFile.h"
 #include "TAS/TASReplayer.h"
 
@@ -57,13 +57,17 @@ private:
 	 virtual void LateUpdate(unsigned updateFlags) override;
 
     void pauseUpdate(bool pause);
+public:
 
     bool m_bDrawGUI = false;
     bool m_bStep = false;
     bool m_bPause = false;
+
+    bool m_bRecordingInputs = false;
+    bool m_bVerifyingInputs = true;
     bool m_bFUCK = false;
     uint64_t m_frameCount = 0;
-    std::unique_ptr<InputRecorder> m_inputRecorder;
+    std::unique_ptr<InputListener> m_inputRecorder;
     std::unique_ptr<TASFile> m_tasFile;
     std::unique_ptr<TASReplayer> m_tasReplayer;
     void DrawMenuBar();

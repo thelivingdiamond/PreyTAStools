@@ -24,6 +24,11 @@ public:
     void executeFrame();
     void resetFrameNumber();
 
+    void clear();
+
+    void addFrame(std::vector<SInputEvent> & events);
+
+    bool verifyFrame(std::vector<SInputEvent> inputs);
 };
 
 
